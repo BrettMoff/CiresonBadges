@@ -1,6 +1,6 @@
 --Create_BadgesMyWorkQuery.sql
 --use a GUID generator to create some new guids for your view panel and navigation node.  NOTE: All guids must be completely lower case. Powershell syntax [GUID]::NewGuid()
-DECLARE @DataSourceGuid uniqueidentifier			= '919b224f-6ca8-40ed-a16e-530e2de235e2'
+DECLARE @DataSourceGuid uniqueidentifier			= '6DAF2352-3661-A776-47FB-9EE52BC47881'
 
 -- set the query title
 DECLARE @QueryTitle nvarchar(255)  					= 'My Work Items'
@@ -10,6 +10,7 @@ DECLARE @Query nvarchar(max) = '
 /* Badges My Work */
 
 Select WorkItemId as [Id]
+	,WorkItem.LastModified
 from ServiceManagement.dbo.WorkItem
 inner join ServiceManagement.dbo.DisplayString as DisplayStringStatus on DisplayStringStatus.ElementID = WorkItem.StatusId
 	and DisplayStringStatus.LocaleID = ''ENU''

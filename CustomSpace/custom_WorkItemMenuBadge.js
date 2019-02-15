@@ -31,7 +31,7 @@ $(document).ready(function () {
 	
 	var guidDataSource_MyWork = '6DAF2352-3661-A776-47FB-9EE52BC47881';
 	var guidDataSource_TeamWork = '';
-	var guidDataSource_MyRequests = '';
+	var guidDataSource_MyRequests = '4876b613-fa75-421b-9345-8c570821b55e';
 	var guidDataSource_TeamRequests = '';
 	var guidDataSource_ActiveWork = 'A1FDBF16-7A53-D471-4893-0CA219483B0F';
 	var guidDataSource_WatchList = '';
@@ -135,10 +135,10 @@ $(document).ready(function () {
 		var badgeObject_MyRequests = {navTitle: "My Requests", 
 									  settingKey: "Badge-MyRequests", 
 									  settingValue: null, 
-									  apiString: "/api/V3/WorkItem/GetGridWorkItemsMyRequests?userId=" + session.user.Id + "&showInactiveItems=false",
+									  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter" + "&queryId=" + guidDataSource_MyRequests, 
 									  blnShowUnassignedItems: false,
 									  blnShowStaleItems: true,
-									  };
+									  }; 
 		var badgeObject_MyWork = {navTitle: "My Work", 
 								  settingKey: "Badge-MyWork", 
 								  settingValue: null, 
@@ -374,7 +374,7 @@ $(document).ready(function () {
 	}
 	
 
-})();
+});
 /* ------------------------------------------------------- */
 /* -----------End Custom WorkItem Menu Badge ------------- */
 /* ------------------------------------------------------- */
