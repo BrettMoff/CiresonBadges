@@ -9,5 +9,8 @@ Instructions:
 5. Go to the settings page within the Cireson portal to configure the badges as desired.
 
 BLUE = Work Item Count
-ORANGE = Work Items that have not been updated in X days
-RED = Work Items that are not assigned to an analyst
+ORANGE = Work Items that are not assigned to an analyst
+RED = Work Items that have not been updated in X (3) days
+
+Notes:
+If a navigation node has both an orange badge and a red badge, then the orange badge will be shown and the red badge will be ignored.
