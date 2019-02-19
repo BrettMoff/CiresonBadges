@@ -106,16 +106,16 @@ $(document).ready(function () {
 		});
 		
 		// Style that is common to Unassigned badges
-        addRule(".menu-badgeunassigned", {
-            "background": "#E9001B",
+        addRule(".menu-badgestale", {
+            "background": "#E9001B", //red
             "background-image": "linear-gradient(to bottom, #FF0000, #8B0000)",
             "border": "1px solid #8B0000",
 			"color": "white",
         });
 		
 		// Style that is common to Needs Updating badges
-		addRule(".menu-badgeneedsupdating", {
-            "background": "#E9001B",
+		addRule(".menu-badgeunassigned", {
+            "background": "#ff9400", //orange
             "background-image": "linear-gradient(to bottom, #ff9400, #8b5100)",
             "border": "1px solid #8b5100",
 			"color": "white",
@@ -149,15 +149,15 @@ $(document).ready(function () {
 		var badgeObject_TeamWork = {navTitle: "Team Work", 
 								  settingKey: "Badge-TeamWork", 
 								  settingValue: null, 
-								  apiString: "/api/V3/WorkItem/GetGridWorkItemsMyGroups?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
+								  apiString: "/api/V3/WorkItem/GetGridWorkItemsMyGroups?userId=" + session.user.Id + "&isScoped=false&showActivities=false&showInactiveItems=false",
 								  blnShowUnassignedItems: true,
-								  blnShowStaleItems: false
+								  blnShowStaleItems: true
 								  };
 		var badgeObject_ActiveWork = {navTitle: "Active Work", 
 								  settingKey: "Badge-ActiveWork", 
 								  settingValue: null, 
 								  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter" + "&queryId=" + guidDataSource_ActiveWork,
-								  blnShowUnassignedItems: false,
+								  blnShowUnassignedItems: true,
 								  blnShowStaleItems: true
 								  };
 		var badgeObject_TeamRequests = {navTitle: "Team Requests", 
@@ -208,7 +208,7 @@ $(document).ready(function () {
 				}
 				
 				if (settingDataValue.toUpperCase() != "TRUE") {
-					console.log("Badge setting for '" + thisBadgeObject.navTitle + "' is set to disabled. Ignoring.");
+					//console.log("Badge setting for '" + thisBadgeObject.navTitle + "' is set to disabled. Ignoring.");
 					return;
 				}
 				
@@ -303,18 +303,27 @@ $(document).ready(function () {
 		
 		// Show a second badge with a count of the WI's that are not updated in x days. If no WI's need updating in this view, hide the badge.
 		var itemsThatNeedUpdatingOrAssignment = 0;
+		
+		//If we want to show both stale items and unassigned items, then unnassigned items wins with an orange counter.
+		if(thisBadgeObject.blnShowUnassignedItems == true && thisBadgeObject.blnShowStaleItems == true && intWorkItemsWithNoAssignedUserCount > 0) {
+			thisBadgeObject.blnShowStaleItems = false;
+		}
+		
+		var strBadgeClass = "";
 		if (thisBadgeObject.blnShowUnassignedItems == true && intWorkItemsWithNoAssignedUserCount > 0) {
 			itemsThatNeedUpdatingOrAssignment = intWorkItemsWithNoAssignedUserCount;
+			strBadgeClass = "menu-badgeunassigned";
 		}
 		else if (thisBadgeObject.blnShowStaleItems == true && intStaleWorkItemCount > 0) {
 			itemsThatNeedUpdatingOrAssignment = intStaleWorkItemCount;
+			strBadgeClass = "menu-badgestale";
 		}
 		
 		if (itemsThatNeedUpdatingOrAssignment > 0) {
 			var thisMenuBadgeSpanLeft = targetNavNode.find("span.menu-leftbadge");
 			//console.log(thisMenuBadgeSpanLeft);
 			if (thisMenuBadgeSpanLeft.length == 0) {
-				targetNavNode.append('<span class="menu-badge menu-leftbadge menu-badgeunassigned"></span>');
+				targetNavNode.append('<span class="menu-badge menu-leftbadge ' + strBadgeClass + '"></span>');
 				thisMenuBadgeSpanLeft = targetNavNode.find("span.menu-leftbadge");
 			}
 			//var thisMenuBadgeSpanLeft = $('a[href="/View/cca5abda-6803-4833-accd-d59a43e2d2cf"] .menu-badgeunassigned');
