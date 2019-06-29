@@ -2,10 +2,11 @@
 /* -------------- Custom WorkItem Menu Badge ------------- */
 /* ------------------------------------------------------- */
 /*
-v7.1.2016.1
-Author: Martin Blomgren, Brian Wiest, Eric Brown, Brett Moffett, Joivan
+Author: Martin Blomgren, Brian Wiest, Eric Brown, Brett Moffett, Joivan Hedrick
 Description: Adds a custom badge on the menu item counting all active work items. Refreshes every minute.
 
+v1.2.1	Make the Stale work Item setting lookup more efficient
+v1.2	Add setting for configuring the number of days for Stale work items
 v1.1	Replace GetGridWorkItemsAll API call with GetDashboardDataById API call
 v0.6 	Added comments through the code to make it easier to diagnose issues and expand
 v0.5 	Added left and right badges to allow display of 2 counts on each view
@@ -17,11 +18,7 @@ v0.1 	initial release
 
 
 TO DO LIST:
-- Replace GetGridWorkItemsMyRequests API call with GetDashboardDataById API call
-- Replace GetGridWorkItemsMyGroups API call with GetDashboardDataById API call
-- Replace GetGridWorkItemsByUser API call with GetDashboardDataById API call
-- Replace GetGridWorkItemsAll API call with GetDashboardDataById API call
-- Replace GetWatchListByUserId API call with GetDashboardDataById API call
+
 */
 $(document).ready(function () {
 	
@@ -29,6 +26,7 @@ $(document).ready(function () {
 		return;
 	} 
 	
+	// 
 	var guidDataSource_MyWork = '6DAF2352-3661-A776-47FB-9EE52BC47881';
 	var guidDataSource_TeamWork = '';
 	var guidDataSource_MyRequests = '4876b613-fa75-421b-9345-8c570821b55e';
@@ -173,15 +171,23 @@ $(document).ready(function () {
 								  apiString: "/api/V3/WorkItem/GetWatchListByUserId?userId=" + session.user.Id,
 								  blnShowUnassignedItems: false,
 								  blnShowStaleItems: false
-								  };
-		
-		//Check settings and load badges if necessary.
-		GetSettingsValueAndLoadBadges(badgeObject_MyWork);
-		GetSettingsValueAndLoadBadges(badgeObject_TeamWork);
-		GetSettingsValueAndLoadBadges(badgeObject_ActiveWork);
-		GetSettingsValueAndLoadBadges(badgeObject_MyRequests);
-		GetSettingsValueAndLoadBadges(badgeObject_TeamRequests);
-		GetSettingsValueAndLoadBadges(badgeObject_WatchList);
+								  };		
+		//Get the number of days from settings for Days Before Stale Work Items
+		$.ajax({
+			url: "/api/V3/Settings/GetSetting?settingKey=Badge-DaysBeforeStale",
+			type: "GET",
+			async: true,
+			success: function (daysBeforeStaleSettingData){
+				var intStaleDays = daysBeforeStaleSettingData.Value
+				//Check settings and load badges if necessary.
+				GetSettingsValueAndLoadBadges(badgeObject_MyWork, intStaleDays);
+				GetSettingsValueAndLoadBadges(badgeObject_TeamWork, intStaleDays);
+				GetSettingsValueAndLoadBadges(badgeObject_ActiveWork, intStaleDays);
+				GetSettingsValueAndLoadBadges(badgeObject_MyRequests, intStaleDays);
+				GetSettingsValueAndLoadBadges(badgeObject_TeamRequests, intStaleDays);
+				GetSettingsValueAndLoadBadges(badgeObject_WatchList, intStaleDays);
+			}
+		});
 	
 	}
 	
@@ -191,7 +197,7 @@ $(document).ready(function () {
 	//	apiString, Either a GetDashboardDataById call, or OOB call like GetGridWorkItemsMyRequests.
 	//	blnShowUnassignedItems, decides if we show items that have no assigned user.
 	//	blnShowStaleItems, decides if we show stale non-modified item badge on the left.
-	function GetSettingsValueAndLoadBadges(thisBadgeObject) {
+	function GetSettingsValueAndLoadBadges(thisBadgeObject, intStaleDays) {
 		$.ajax({
 			url: "/api/V3/Settings/GetSetting?settingKey=" + thisBadgeObject.settingKey,
 			type: "GET",
@@ -208,7 +214,7 @@ $(document).ready(function () {
 				}
 				
 				if (settingDataValue.toUpperCase() != "TRUE") {
-					//console.log("Badge setting for '" + thisBadgeObject.navTitle + "' is set to disabled. Ignoring.");
+					console.log("Badge setting for '" + thisBadgeObject.navTitle + "' is set to disabled. Ignoring.");
 					return;
 				}
 				
@@ -220,7 +226,7 @@ $(document).ready(function () {
 					success: function (queryResults){
 						thisBadgeObject.data = queryResults;
 						try{
-							ShowBadgesFromBadgeObject(thisBadgeObject);
+							ShowBadgesFromBadgeObject(thisBadgeObject, intStaleDays);
 							var dateNow = new Date();
 							var dateTwoHoursAgo = dateNow.setHours(dateNow.getHours()-2);
 							dateTwoHoursAgo = new Date(dateTwoHoursAgo);
@@ -253,15 +259,15 @@ $(document).ready(function () {
 	//	data, the returned work items from our dashboard query.
 	//	blnShowUnassignedItems, decides if we show items that have no assigned user.
 	//	blnShowStaleItems, decides if we show stales non-modified item badge on the left.
-	function ShowBadgesFromBadgeObject(thisBadgeObject) {
-		
+	function ShowBadgesFromBadgeObject(thisBadgeObject, intStaleDays) {
+
 		var data = thisBadgeObject.data;
 		if (data.length == 0) {
 			return;
 		}
 		//There's only one row with our data.
 		//data = data[0];
-		var workItemCountData = GetWorkItemCountsFromApiData(data); //This could be multiple rows with one workitem per row, or one row with specific columns.
+		var workItemCountData = GetWorkItemCountsFromApiData(data, intStaleDays); //This could be multiple rows with one workitem per row, or one row with specific columns.
 		//workItemCountData contains data.WorkItemCount, data.WorkItemsWithNoAssignedUserCount, data.StaleWorkItemCount;
 		
 		intWorkItemCount = workItemCountData.WorkItemCount;
@@ -338,7 +344,7 @@ $(document).ready(function () {
 		
 	}
 		
-	function GetWorkItemCountsFromApiData(apiData) {
+	function GetWorkItemCountsFromApiData(apiData, intStaleDays) {
 		if (apiData == null)
 			throw "The expected API data was null?";
 		
@@ -349,8 +355,10 @@ $(document).ready(function () {
 		
 		var returnData = {WorkItemCount: 0, WorkItemsWithNoAssignedUserCount: 0, StaleWorkItemCount: 0};
 		
+
+		
 		var datToday = new Date();
-		var intXDaysAgo = datToday.setDate(datToday.getDate() -3);
+		var intXDaysAgo = datToday.setDate(datToday.getDate() -intStaleDays);
 		var datDaysAgo = new Date(intXDaysAgo);
 			
 		//Calculate and do some stuff.
@@ -358,7 +366,7 @@ $(document).ready(function () {
 		var intStaleWorkItemCount = 0;
 		var intWorkItemsWithNoAssignedUserCount = 0;
 		
-		//Get the stale workitem count.
+		//Get the stale work item count.
 		for (var i = 0; i < apiData.length; i++) {
 			if (Date.parse(apiData[i].LastModified) < datDaysAgo ) {
 				intStaleWorkItemCount++;
