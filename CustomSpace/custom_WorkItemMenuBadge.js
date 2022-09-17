@@ -5,6 +5,9 @@
 Author: Martin Blomgren, Brian Wiest, Eric Brown, Brett Moffett, Joivan Hedrick
 Description: Adds a custom badge on the menu item counting all active work items. Refreshes every minute.
 
+v1.3	Added Badge Title to settings to allow for renaming of the default views
+		Renamed settings values to be more user friendly (Badge Enabled - ....)
+		Added more comments and logging.
 v1.2.1	Make the Stale work Item setting lookup more efficient
 v1.2	Add setting for configuring the number of days for Stale work items
 v1.1	Replace GetGridWorkItemsAll API call with GetDashboardDataById API call
@@ -21,18 +24,21 @@ TO DO LIST:
 
 */
 $(document).ready(function () {
-	
+	// Chck to see if the user that is logged on is an end user or Analyst
 	if (session.user.Analyst != 1 && session.user.IsAdmin != true) { 
-		return;
+		return; //User is an end user so quit out.
 	} 
 	
-	// 
+	var varLogging = 'True'
+	if (varLogging.toUpperCase() == "TRUE") {console.log("Cireson Badges logging enabled");}
+	
+	// SQL Data Sources that return the data needed for the solution.
 	var guidDataSource_MyWork = '6DAF2352-3661-A776-47FB-9EE52BC47881';
-	var guidDataSource_TeamWork = '';
+	var guidDataSource_ActiveWork = '7408f774-deda-4095-962e-6800934f67b7';
 	var guidDataSource_MyRequests = '4876b613-fa75-421b-9345-8c570821b55e';
-	var guidDataSource_TeamRequests = '';
-	var guidDataSource_ActiveWork = 'A1FDBF16-7A53-D471-4893-0CA219483B0F';
-	var guidDataSource_WatchList = '';
+	//var guidDataSource_TeamWork = ''; //No longer needed as we use the GetGridWorkItemsMyGroups API call to get this data
+	//var guidDataSource_TeamRequests = ''; //No longer needed as we use the GetMyTeamRequest API call to get this data
+	//var guidDataSource_WatchList = ''; //No longer needed as we use the GetWatchListByUserId API call to get this data
 	
 	var dateBadgesStartDateTime = new Date(); //We don't want it to run forever, even after the page has timed out.
 	
@@ -40,10 +46,10 @@ $(document).ready(function () {
 	var badgeObserver = new MutationObserver(function (mutations) {
 		var targetElement = $('#side_nav');
 		if(targetElement.length > 0) {
-			ApplyStyleSheetBadge(); // Add CSS
-			createBadges(); // This will run on page load
+			fn_ApplyStyleSheetBadge(); // Add CSS rules in anticipation of loading the badges successfully
+			fn_createBadgeVariables(); // This will run on page load and create empty variables for each badge, then load the badge but only if enabled in settings
 			/*objBadgesIntervalTimerId = setInterval(function () {
-				createBadges() // this will run after every 60 seconds
+				fn_createBadgeVariables() // this will run after every 60 seconds
 			}, 60000); */
 
 			badgeObserver.disconnect();
@@ -64,7 +70,7 @@ $(document).ready(function () {
 	});
 //*************************************************************************************************************************************************************************
 	// Define the style of the badges as they appear on screen.
-    function ApplyStyleSheetBadge() {
+    function fn_ApplyStyleSheetBadge() {
         var addRule = (function(style){
             var sheet = document.head.appendChild(style).sheet;
             return function(selector, css){
@@ -125,61 +131,77 @@ $(document).ready(function () {
     }
 	
 //*************************************************************************************************************************************************************************
-	// Create menu-badges for each of the views.
+	// Create menu-badges varibale for each of the views ready to be used but not filled with data.
 	// These can be enabled and disabled by commenting out the badges not wanted. These are also controlled via Portal settings. 
-	var createBadges = function() {
+	var fn_createBadgeVariables = function() {
 		
 		//initialize our badge objects.
-		var badgeObject_MyRequests = {navTitle: "My Requests", 
-									  settingKey: "Badge-MyRequests", 
-									  settingValue: null, 
+		var badgeObject_MyRequests = {navTitleSetting: "Badge Title - My Requests", 
+									  defaultTitle: "My Requests",
+									  settingKey: "Badge Enabled - My Requests", 
+									  bl_BadgeEnabled: null, 
 									  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter" + "&queryId=" + guidDataSource_MyRequests, 
 									  blnShowUnassignedItems: false,
 									  blnShowStaleItems: true,
 									  }; 
-		var badgeObject_MyWork = {navTitle: "My Work", 
-								  settingKey: "Badge-MyWork", 
-								  settingValue: null, 
+		var badgeObject_MyWork = {navTitleSetting: "Badge Title - My Work", 
+								  defaultTitle: "My Work",
+								  settingKey: "Badge Enabled - My Work", 
+								  bl_BadgeEnabled: null, 
 								  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter" + "&queryId=" + guidDataSource_MyWork, 
 								  blnShowUnassignedItems: false,
 								  blnShowStaleItems: true
 								  };
-		var badgeObject_TeamWork = {navTitle: "Team Work", 
-								  settingKey: "Badge-TeamWork", 
-								  settingValue: null, 
+		var badgeObject_TeamWork = {navTitleSetting: "Badge Title - Team Work", 
+								  defaultTitle: "Team Work",
+								  settingKey: "Badge Enabled - Team Work", 
+								  bl_BadgeEnabled: null, 
 								  apiString: "/api/V3/WorkItem/GetGridWorkItemsMyGroups?userId=" + session.user.Id + "&isScoped=false&showActivities=false&showInactiveItems=false",
 								  blnShowUnassignedItems: true,
 								  blnShowStaleItems: true
 								  };
-		var badgeObject_ActiveWork = {navTitle: "Active Work", 
-								  settingKey: "Badge-ActiveWork", 
-								  settingValue: null, 
+		var badgeObject_ActiveWork = {navTitleSetting: "Badge Title - Active Work", 
+								  defaultTitle: "Active Work",
+								  settingKey: "Badge Enabled - Active Work", 
+								  bl_BadgeEnabled: null, 
 								  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter" + "&queryId=" + guidDataSource_ActiveWork,
 								  blnShowUnassignedItems: true,
 								  blnShowStaleItems: true
 								  };
-		var badgeObject_TeamRequests = {navTitle: "Team Requests", 
-								  settingKey: "Badge-TeamRequests", 
-								  settingValue: null, 
+		var badgeObject_TeamRequests = {navTitleSetting: "Badge Title - Team Requests", 
+								  defaultTitle: "Team Requests",
+								  settingKey: "Badge Enabled - Team Requests", 
+								  bl_BadgeEnabled: null, 
 								  apiString: "/api/V3/WorkItem/GetMyTeamRequest?userId=" + session.user.Id + "&showInactiveItems=false&isScoped=false",
 								  blnShowUnassignedItems: false,
 								  blnShowStaleItems: true
 								  };
-		var badgeObject_WatchList = {navTitle: "Watch List", 
-								  settingKey: "Badge-WatchList", 
-								  settingValue: null, 
+		var badgeObject_WatchList = {navTitleSetting: "Badge Title - Watch List", 
+								  defaultTitle: "Watch List",
+								  settingKey: "Badge Enabled - Watch List", 
+								  bl_BadgeEnabled: null, 
 								  apiString: "/api/V3/WorkItem/GetWatchListByUserId?userId=" + session.user.Id,
 								  blnShowUnassignedItems: false,
 								  blnShowStaleItems: false
 								  };		
 		//Get the number of days from settings for Days Before Stale Work Items
 		$.ajax({
-			url: "/api/V3/Settings/GetSetting?settingKey=Badge-DaysBeforeStale",
+			url: "/api/V3/Settings/GetSetting?settingKey=Badge - Days Before Stale",
 			type: "GET",
 			async: true,
 			success: function (daysBeforeStaleSettingData){
-				var intStaleDays = daysBeforeStaleSettingData.Value
-				//Check settings and load badges if necessary.
+				// ********** Validate the settings returned ********
+					if (daysBeforeStaleSettingData == null) { //Setting value not found. Create_BadgesSettingsItems.sql might need to be run
+						throw "The Setting for Badge-DaysBeforeStale was not found. Ensure Create_BadgesSettingsItems.sql was run and the setting values exist.";
+					}
+					else 
+						var intStaleDays = daysBeforeStaleSettingData.Value	
+					if (intStaleDays == null) { //Setting is found but a NULL value has been found.
+						throw "Setting value for Badge-DaysBeforeStale is null. Does it have a numeric value, and was the client session restarted?";
+					}
+				// *************************************************************
+				if (varLogging.toUpperCase() == "TRUE") {console.log("Days before Stale Settings Data value " + daysBeforeStaleSettingData.Value);}
+				// Check settings and load badges if necessary.
 				GetSettingsValueAndLoadBadges(badgeObject_MyWork, intStaleDays);
 				GetSettingsValueAndLoadBadges(badgeObject_TeamWork, intStaleDays);
 				GetSettingsValueAndLoadBadges(badgeObject_ActiveWork, intStaleDays);
@@ -198,27 +220,30 @@ $(document).ready(function () {
 	//	blnShowUnassignedItems, decides if we show items that have no assigned user.
 	//	blnShowStaleItems, decides if we show stale non-modified item badge on the left.
 	function GetSettingsValueAndLoadBadges(thisBadgeObject, intStaleDays) {
+		if (varLogging.toUpperCase() == "TRUE") {console.log("Getting badge setting for '" + thisBadgeObject.settingKey);}
 		$.ajax({
 			url: "/api/V3/Settings/GetSetting?settingKey=" + thisBadgeObject.settingKey,
 			type: "GET",
 			async: true,
-			success: function (settingData){
-				//console.log(settingData);
+			success: function (fn_BadgeEnabledSetting){
+				// ********** Validate the settings returned ********
+					if (fn_BadgeEnabledSetting == null) { //Setting value not found. Create_BadgesSettingsItems.sql might need to be run
+						throw "The Setting for '" + thisBadgeObject.settingKey + "' was not found. Ensure Create_BadgesSettingsItems.sql was run and the setting values exist.";
+					}
+					else if (fn_BadgeEnabledSetting.Value == null) { //Setting is found but a NULL value has been found.
+						throw "Setting value for '" + thisBadgeObject.settingKey + "' is null. Does it have a TRUE/FALSE value, and was the client session restarted?";
+					}
+					
+					var bl_BadgeEnbaledValue = fn_BadgeEnabledSetting.Value;
+					if (bl_BadgeEnbaledValue.toUpperCase() != "TRUE") { //Setting is found but is set to FALSE.
+						if (varLogging.toUpperCase() == "TRUE") {console.log("Badge setting for '" + thisBadgeObject.settingKey + "' is set to disabled. Ignoring.");}
+						return;
+					}
+				// *************************************************************
+				if (varLogging.toUpperCase() == "TRUE") {console.log("Badge setting for '" + thisBadgeObject.settingKey + "' is set to " + fn_BadgeEnabledSetting.Value);}
+				thisBadgeObject.bl_BadgeEnabled = bl_BadgeEnbaledValue;  //Not sure this line is needed as we are storing this value but not using it
 				
-				var settingDataValue = settingData.Value;
-				if (settingData == null) {
-					throw "The Setting for '" + thisBadgeObject.settingKey + "' was not found.";
-				}
-				else if (settingDataValue == null) {
-					throw "Setting Setting value for '" + thisBadgeObject.settingKey + "' is null. Does it have a TRUE/FALSE value, and was the client session restarted?";
-				}
-				
-				if (settingDataValue.toUpperCase() != "TRUE") {
-					console.log("Badge setting for '" + thisBadgeObject.navTitle + "' is set to disabled. Ignoring.");
-					return;
-				}
-				
-				thisBadgeObject.settingValue = settingDataValue;
+				// ********** Get API Query Results ***************
 				$.ajax({
 					url: thisBadgeObject.apiString,
 					type: "GET",
@@ -226,7 +251,7 @@ $(document).ready(function () {
 					success: function (queryResults){
 						thisBadgeObject.data = queryResults;
 						try{
-							ShowBadgesFromBadgeObject(thisBadgeObject, intStaleDays);
+							fn_ShowBadgesFromBadgeObject(thisBadgeObject, intStaleDays);
 							var dateNow = new Date();
 							var dateTwoHoursAgo = dateNow.setHours(dateNow.getHours()-2);
 							dateTwoHoursAgo = new Date(dateTwoHoursAgo);
@@ -240,13 +265,12 @@ $(document).ready(function () {
 							}
 						}
 						catch(error) {
-							console.log("error occurred during ShowBadgesFromBadgeObject for '" + thisBadgeObject.navTitle + "'.");
+							console.log("error occurred during fn_ShowBadgesFromBadgeObject for '" + thisBadgeObject.settingKey + "'.");
 							throw error;
 						}
-						
-						
 					}
 				});
+				// *************************************************************
 			}
 		});
 	}
@@ -254,97 +278,117 @@ $(document).ready(function () {
 	//param thisBadgeObject contains:
 	//	navTitle, like "My Work". The human-readable text that appears in the navigation node on the left. The badges will appear here.
 	//  settingKey, like 'Badge-MyWork';
-	//  settingValue, like 'TRUE';
+	//  bl_BadgeEnabled, like 'TRUE';
 	//	dataSourceGuid for API Dashboard lookups.
 	//	data, the returned work items from our dashboard query.
 	//	blnShowUnassignedItems, decides if we show items that have no assigned user.
 	//	blnShowStaleItems, decides if we show stales non-modified item badge on the left.
-	function ShowBadgesFromBadgeObject(thisBadgeObject, intStaleDays) {
+	function fn_ShowBadgesFromBadgeObject(thisBadgeObject, intStaleDays) {
 
 		var data = thisBadgeObject.data;
 		if (data.length == 0) {
 			return;
 		}
-		//There's only one row with our data.
-		//data = data[0];
-		var workItemCountData = GetWorkItemCountsFromApiData(data, intStaleDays); //This could be multiple rows with one workitem per row, or one row with specific columns.
-		//workItemCountData contains data.WorkItemCount, data.WorkItemsWithNoAssignedUserCount, data.StaleWorkItemCount;
 		
-		intWorkItemCount = workItemCountData.WorkItemCount;
-		intStaleWorkItemCount = workItemCountData.StaleWorkItemCount;
-		intWorkItemsWithNoAssignedUserCount = workItemCountData.WorkItemsWithNoAssignedUserCount;
+		$.ajax({
+			url: "/api/V3/Settings/GetSetting?settingKey=" + thisBadgeObject.navTitleSetting,
+			type: "GET",
+			async: true,
+			success: function (fn_BadgeTitleSetting){
 		
-		//console.log(workItemCountData);
-		
-		if (intWorkItemCount == null || intStaleWorkItemCount == null || intWorkItemsWithNoAssignedUserCount == null) {
-			throw "The expected columns were not found for " + thisBadgeObject.navTitle;
-		}
-		
-		var navTitle = thisBadgeObject.navTitle;
-		//Add our CSS class to this nav node.
-		var targetNavNode = $($('#side_nav li.nav_hover').find('span:contains("' + navTitle + '")')).parent(); //$('#side_nav li.nav_hover').find('span:contains("My Work")').parent();
-		//targetNavNode should be an a tag.
-		if (targetNavNode.length == 0) {
-			throw "Found " + targetNavNode.length + " navigation nodes with name '" + navTitle + "'.";
-		}
-		
-		var thisMenuBadgeSpanRight = targetNavNode.find("span.menu-rightbadge");
-		//console.log(thisMenuBadgeSpanRight);
-		if (thisMenuBadgeSpanRight.length == 0) {
-			targetNavNode.append('<span class="menu-badge menu-rightbadge"></span>');
-			thisMenuBadgeSpanRight = targetNavNode.find("span.menu-rightbadge");
-		}
-		
-		if (intWorkItemCount > 0) {
-			thisMenuBadgeSpanRight.removeClass('no-badge');
-			thisMenuBadgeSpanRight.text(intWorkItemCount);
-		} else {
-			thisMenuBadgeSpanRight.addClass('no-badge');
-			thisMenuBadgeSpanRight.text('');
-		}
-		
-		// Find the number of WI's in this view that have not been updated in 3 days, OR are unassigned (but not both.
-		// Unassigned takes precedence over lastupdated.
-		// NOTE: In future it would be good to get this value from a setting in the portal.
-		
-		// Show a second badge with a count of the WI's that are not updated in x days. If no WI's need updating in this view, hide the badge.
-		var itemsThatNeedUpdatingOrAssignment = 0;
-		
-		//If we want to show both stale items and unassigned items, then unnassigned items wins with an orange counter.
-		if(thisBadgeObject.blnShowUnassignedItems == true && thisBadgeObject.blnShowStaleItems == true && intWorkItemsWithNoAssignedUserCount > 0) {
-			thisBadgeObject.blnShowStaleItems = false;
-		}
-		
-		var strBadgeClass = "";
-		if (thisBadgeObject.blnShowUnassignedItems == true && intWorkItemsWithNoAssignedUserCount > 0) {
-			itemsThatNeedUpdatingOrAssignment = intWorkItemsWithNoAssignedUserCount;
-			strBadgeClass = "menu-badgeunassigned";
-		}
-		else if (thisBadgeObject.blnShowStaleItems == true && intStaleWorkItemCount > 0) {
-			itemsThatNeedUpdatingOrAssignment = intStaleWorkItemCount;
-			strBadgeClass = "menu-badgestale";
-		}
-		
-		if (itemsThatNeedUpdatingOrAssignment > 0) {
-			var thisMenuBadgeSpanLeft = targetNavNode.find("span.menu-leftbadge");
-			//console.log(thisMenuBadgeSpanLeft);
-			if (thisMenuBadgeSpanLeft.length == 0) {
-				targetNavNode.append('<span class="menu-badge menu-leftbadge ' + strBadgeClass + '"></span>');
-				thisMenuBadgeSpanLeft = targetNavNode.find("span.menu-leftbadge");
+				var str_BadgeTitleValue = fn_BadgeTitleSetting.Value;
+				console.log("Setting value for '" + thisBadgeObject.navTitleSetting + "' is null.");
+				// ********** Validate the settings returned ********
+					if (fn_BadgeTitleSetting == null) { //Setting value not found. Create_BadgesSettingsItems.sql might need to be run
+						throw "The Setting for '" + thisBadgeObject.navTitleSetting + "' was not found. Ensure Create_BadgesSettingsItems.sql was run and the setting values exist.";
+					}
+					else if (str_BadgeTitleValue == null) { //Setting is found but a NULL value has been found.
+						if (varLogging.toUpperCase() == "TRUE") {console.log("Setting value for '" + thisBadgeObject.navTitleSetting + "' is null. Setting to default value of '" + thisBadgeObject.defaultTitle + "'.");}
+						var str_BadgeTitleValue = thisBadgeObject.defaultTitle;
+					}
+				// *************************************************************
+				
+			//There's only one row with our data.
+			//data = data[0];
+			var workItemCountData = fn_GetWorkItemCountsFromApiData(data, intStaleDays); //This could be multiple rows with one workitem per row, or one row with specific columns.
+			//workItemCountData contains data.WorkItemCount, data.WorkItemsWithNoAssignedUserCount, data.StaleWorkItemCount;
+			
+			intWorkItemCount = workItemCountData.WorkItemCount;
+			intStaleWorkItemCount = workItemCountData.StaleWorkItemCount;
+			intWorkItemsWithNoAssignedUserCount = workItemCountData.WorkItemsWithNoAssignedUserCount;
+			
+			//console.log(workItemCountData);
+			
+			if (intWorkItemCount == null || intStaleWorkItemCount == null || intWorkItemsWithNoAssignedUserCount == null) {
+				throw "The expected columns were not found for " + str_BadgeTitleValue;
 			}
-			//var thisMenuBadgeSpanLeft = $('a[href="/View/cca5abda-6803-4833-accd-d59a43e2d2cf"] .menu-badgeunassigned');
-		
-			thisMenuBadgeSpanLeft.removeClass('no-badge');
-			thisMenuBadgeSpanLeft.text(itemsThatNeedUpdatingOrAssignment);
-		}
-		/*else {
-			thisMenuBadgeSpanLeft.addClass('no-badge');
-			thisMenuBadgeSpanLeft.text('');
-		}*/
-		
+			
+			var navTitle = str_BadgeTitleValue;
+			//Add our CSS class to this nav node.
+			var targetNavNode = $($('#side_nav li.nav_hover').find('span:contains("' + navTitle + '")')).parent(); //$('#side_nav li.nav_hover').find('span:contains("My Work")').parent();
+			//targetNavNode should be an a tag.
+			if (targetNavNode.length == 0) {
+				throw "Found " + targetNavNode.length + " navigation nodes with name '" + navTitle + "'.";
+			}
+			
+			var thisMenuBadgeSpanRight = targetNavNode.find("span.menu-rightbadge");
+			
+			if (thisMenuBadgeSpanRight.length == 0) {
+				targetNavNode.append('<span class="menu-badge menu-rightbadge"></span>');
+				thisMenuBadgeSpanRight = targetNavNode.find("span.menu-rightbadge");
+			}
+			
+			if (intWorkItemCount > 0) {
+				thisMenuBadgeSpanRight.removeClass('no-badge');
+				thisMenuBadgeSpanRight.text(intWorkItemCount);
+			} else {
+				thisMenuBadgeSpanRight.addClass('no-badge');
+				thisMenuBadgeSpanRight.text('');
+			}
+			
+			// Find the number of WI's in this view that have not been updated in 3 days, OR are unassigned (but not both.
+			// Unassigned takes precedence over lastupdated.
+			// NOTE: In future it would be good to get this value from a setting in the portal.
+			
+			// Show a second badge with a count of the WI's that are not updated in x days. If no WI's need updating in this view, hide the badge.
+			var itemsThatNeedUpdatingOrAssignment = 0;
+			
+			//If we want to show both stale items and unassigned items, then unnassigned items wins with an orange counter.
+			if(thisBadgeObject.blnShowUnassignedItems == true && thisBadgeObject.blnShowStaleItems == true && intWorkItemsWithNoAssignedUserCount > 0) {
+				thisBadgeObject.blnShowStaleItems = false;
+			}
+			
+			var strBadgeClass = "";
+			if (thisBadgeObject.blnShowUnassignedItems == true && intWorkItemsWithNoAssignedUserCount > 0) {
+				itemsThatNeedUpdatingOrAssignment = intWorkItemsWithNoAssignedUserCount;
+				strBadgeClass = "menu-badgeunassigned";
+			}
+			else if (thisBadgeObject.blnShowStaleItems == true && intStaleWorkItemCount > 0) {
+				itemsThatNeedUpdatingOrAssignment = intStaleWorkItemCount;
+				strBadgeClass = "menu-badgestale";
+			}
+			
+			if (itemsThatNeedUpdatingOrAssignment > 0) {
+				var thisMenuBadgeSpanLeft = targetNavNode.find("span.menu-leftbadge");
+				
+				if (thisMenuBadgeSpanLeft.length == 0) {
+					targetNavNode.append('<span class="menu-badge menu-leftbadge ' + strBadgeClass + '"></span>');
+					thisMenuBadgeSpanLeft = targetNavNode.find("span.menu-leftbadge");
+				}
+				//var thisMenuBadgeSpanLeft = $('a[href="/View/cca5abda-6803-4833-accd-d59a43e2d2cf"] .menu-badgeunassigned');
+			
+				thisMenuBadgeSpanLeft.removeClass('no-badge');
+				thisMenuBadgeSpanLeft.text(itemsThatNeedUpdatingOrAssignment);
+			}
+			/*else {
+				thisMenuBadgeSpanLeft.addClass('no-badge');
+				thisMenuBadgeSpanLeft.text('');
+			}*/
+			}
+		});
 	}
-		
-	function GetWorkItemCountsFromApiData(apiData, intStaleDays) {
+	
+	function fn_GetWorkItemCountsFromApiData(apiData, intStaleDays) {
 		if (apiData == null)
 			throw "The expected API data was null?";
 		
@@ -354,9 +398,6 @@ $(document).ready(function () {
 		}
 		
 		var returnData = {WorkItemCount: 0, WorkItemsWithNoAssignedUserCount: 0, StaleWorkItemCount: 0};
-		
-
-		
 		var datToday = new Date();
 		var intXDaysAgo = datToday.setDate(datToday.getDate() -intStaleDays);
 		var datDaysAgo = new Date(intXDaysAgo);
@@ -381,16 +422,12 @@ $(document).ready(function () {
 			}
 		}
 		
-		
 		returnData.WorkItemCount = intWorkItemCount;
 		returnData.StaleWorkItemCount = intStaleWorkItemCount;
 		returnData.WorkItemsWithNoAssignedUserCount = intWorkItemsWithNoAssignedUserCount;
 		
 		return returnData;
-		
 	}
-	
-
 });
 /* ------------------------------------------------------- */
 /* -----------End Custom WorkItem Menu Badge ------------- */
