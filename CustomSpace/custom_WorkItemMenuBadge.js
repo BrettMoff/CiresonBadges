@@ -29,7 +29,7 @@ $(document).ready(function () {
 		return; //User is an end user so quit out.
 	} 
 	
-	var varLogging = 'True'
+	var varLogging = 'false'
 	if (varLogging.toUpperCase() == "TRUE") {console.log("Cireson Badges logging enabled");}
 	
 	// SQL Data Sources that return the data needed for the solution.
