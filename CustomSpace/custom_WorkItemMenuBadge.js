@@ -5,8 +5,9 @@
 Author: Martin Blomgren, Brian Wiest, Eric Brown, Brett Moffett, Joivan Hedrick
 Description: Adds a custom badge on the menu item counting all active work items. Refreshes every minute.
 
-v1.4	Added support for enabling and disabling Activities
-		Removed all use of custom dashboards for returning data
+v1.4.1	Added support for enabling and disabling Activities
+		Added Team Work with Activities SQL rather than API
+		Edited some loggingImproved ReadMe instructions
 v1.3.1  Bug fix: Checking for settings values can fail
 		Improved clarity of logging
 v1.3	Added Badge Title to settings to allow for renaming of the default views
@@ -25,7 +26,8 @@ v0.1 	initial release
 
 
 TO DO LIST:
-
+Team Request SQL sources rather than API
+Watch List SQL sources rather than API
 */
 $(document).ready(function () {
 	// Chck to see if the user that is logged on is an end user or Analyst
@@ -36,6 +38,16 @@ $(document).ready(function () {
 	var varLogging = 'FALSE'
 	if (varLogging.toUpperCase() == "TRUE") {console.log("Cireson Badges logging enabled");}
 	
+	// SQL Data Sources that return the data needed for the solution.
+	var guidDataSource_MyWork = '6DAF2352-3661-A776-47FB-9EE52BC47881';
+	var guidDataSource_MyWorkWithActivities = '';
+	var guidDataSource_ActiveWork = 'A1FDBF16-7A53-D471-4893-0CA219483B0F';
+	//var guidDataSource_ActiveWorkWithActivities = 'd569c120-2c23-4a4a-9c3e-60b2cbbb020a';
+	var guidDataSource_TeamWork = 'AFD60BBA-4648-4110-B6C2-0FF233D4587F';
+	var guidDataSource_MyRequests = '4876b613-fa75-421b-9345-8c570821b55e';
+	//var guidDataSource_TeamRequests = ''; //TO DO: Need to replace with SQL query to make faster
+	//var guidDataSource_WatchList = ''; //TO DO: Need to replace with SQL query to make faster
+		
 	var dateBadgesStartDateTime = new Date(); //We don't want it to run forever, even after the page has timed out.
 	
 	//This section is used to observe the portal code loading and wait for the right pieces to load before continuing to execute.
@@ -137,9 +149,9 @@ $(document).ready(function () {
 										  settingKey: "Badge Enabled - My Requests",
 										  activityEnabled: null, //Enable or disable counting active activities on badges not needed on this view
 										  bl_BadgeEnabled: null, 
-										  apiString: "/api/V3/WorkItem/GetGridWorkItemsMyRequests?userId=" + session.user.Id + "&showInactiveItems=false",
-										  apiStringWithActivity: "/api/V3/WorkItem/GetGridWorkItemsMyRequests?userId=" + session.user.Id + "&showInactiveItems=false",
-										  apiStringWithoutActivity: "/api/V3/WorkItem/GetGridWorkItemsMyRequests?userId=" + session.user.Id + "&showInactiveItems=false",
+										  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter&queryId=" + guidDataSource_MyRequests, 
+										  apiStringWithActivity: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter" + "&queryId=" + guidDataSource_MyRequests, 
+										  apiStringWithoutActivity: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter" + "&queryId=" + guidDataSource_MyRequests, 
 										  blnShowUnassignedItems: false,
 										  blnShowStaleItems: true
 										}; 
@@ -148,9 +160,9 @@ $(document).ready(function () {
 										  settingKey: "Badge Enabled - My Work",
 										  activityEnabled: "Badge My Work - Include Activities", //Enable or disable counting active activities on badges
 										  bl_BadgeEnabled: null, 
-										  apiString: "",
-										  apiStringWithActivity: "/api/V3/WorkItem/GetGridWorkItemsByUser?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
-										  apiStringWithoutActivity: "/api/V3/WorkItem/GetGridWorkItemsByUser?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
+										  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter&queryId=" + guidDataSource_MyWork,
+										  apiStringWithActivity: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter&queryId=" + guidDataSource_MyWorkWithActivities, 
+										  apiStringWithoutActivity: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter&queryId=" + guidDataSource_MyWork, 
 										  blnShowUnassignedItems: false,
 										  blnShowStaleItems: true
 										};
@@ -159,9 +171,9 @@ $(document).ready(function () {
 										  settingKey: "Badge Enabled - Team Work",
 										  activityEnabled: "Badge Team Work - Include Activities", //Enable or disable counting active activities on badges
 										  bl_BadgeEnabled: null, 
-										  apiString: "",
-										  apiStringWithActivity: "/api/V3/WorkItem/GetGridWorkItemsMyGroups?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
-										  apiStringWithoutActivity: "/api/V3/WorkItem/GetGridWorkItemsMyGroups?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
+										  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter&queryId=" + guidDataSource_TeamWork + "&ShowActivities=False",
+										  apiStringWithActivity: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter&queryId=" + guidDataSource_TeamWork + "&ShowActivities=True",
+										  apiStringWithoutActivity: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter&queryId=" + guidDataSource_TeamWork + "&ShowActivities=False",
 										  blnShowUnassignedItems: true,
 										  blnShowStaleItems: true
 										};
@@ -170,9 +182,9 @@ $(document).ready(function () {
 										  settingKey: "Badge Enabled - Active Work",
 										  activityEnabled: "Badge Active Work - Include Activities", //Enable or disable counting active activities on badges
 										  bl_BadgeEnabled: null, 
-										  apiString: "",
-										  apiStringWithActivity: "/api/V3/WorkItem/GetGridWorkItemsAll?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
-										  apiStringWithoutActivity: "/api/V3/WorkItem/GetGridWorkItemsAll?userId=" + session.user.Id + "&isScoped=false&showActivities=false&showInactiveItems=false",
+										  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter&queryId=" + guidDataSource_ActiveWork + "&ShowActivities=False",
+										  apiStringWithActivity: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter&queryId=" + guidDataSource_ActiveWork + "&ShowActivities=True",
+										  apiStringWithoutActivity: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter&queryId=" + guidDataSource_ActiveWork + "&ShowActivities=False",
 										  blnShowUnassignedItems: true,
 										  blnShowStaleItems: true
 										 };
