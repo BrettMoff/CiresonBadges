@@ -18,7 +18,7 @@ outer apply (
 
 where (
 		WorkItem.AssignedUserId = @UserId --@UserId is a special Cireson token for the logged-in user GUID.
-		OR ReviewObjects.ReviewerId = @UserId
+		OR ReviewObjects.ReviewerId = @UserId OR WorkItem.PrimaryOwnerId = @UserId
 )
 	
 order by WorkItem.LastModified Desc
