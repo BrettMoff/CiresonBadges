@@ -5,6 +5,8 @@
 Author: Martin Blomgren, Brian Wiest, Eric Brown, Brett Moffett, Joivan Hedrick
 Description: Adds a custom badge on the menu item counting all active work items. Refreshes every minute.
 
+v1.4	Added support for enabling and disabling Activities
+		Removed all use of custom dashboards for returning data
 v1.3.1  Bug fix: Checking for settings values can fail
 		Improved clarity of logging
 v1.3	Added Badge Title to settings to allow for renaming of the default views
@@ -33,14 +35,6 @@ $(document).ready(function () {
 	
 	var varLogging = 'FALSE'
 	if (varLogging.toUpperCase() == "TRUE") {console.log("Cireson Badges logging enabled");}
-	
-	// SQL Data Sources that return the data needed for the solution.
-	var guidDataSource_MyWork = '6DAF2352-3661-A776-47FB-9EE52BC47881';
-	var guidDataSource_ActiveWork = 'A1FDBF16-7A53-D471-4893-0CA219483B0F';
-	var guidDataSource_MyRequests = '4876b613-fa75-421b-9345-8c570821b55e';
-	//var guidDataSource_TeamWork = ''; //No longer needed as we use the GetGridWorkItemsMyGroups API call to get this data
-	//var guidDataSource_TeamRequests = ''; //No longer needed as we use the GetMyTeamRequest API call to get this data
-	//var guidDataSource_WatchList = ''; //No longer needed as we use the GetWatchListByUserId API call to get this data
 	
 	var dateBadgesStartDateTime = new Date(); //We don't want it to run forever, even after the page has timed out.
 	
@@ -138,54 +132,72 @@ $(document).ready(function () {
 	var fn_createBadgeVariables = function() {
 		
 		//initialize our badge objects.
-		var badgeObject_MyRequests = {navTitleSetting: "Badge Title - My Requests", 
-									  defaultTitle: "My Requests",
-									  settingKey: "Badge Enabled - My Requests", 
-									  bl_BadgeEnabled: null, 
-									  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter" + "&queryId=" + guidDataSource_MyRequests, 
-									  blnShowUnassignedItems: false,
-									  blnShowStaleItems: true,
-									  }; 
-		var badgeObject_MyWork = {navTitleSetting: "Badge Title - My Work", 
-								  defaultTitle: "My Work",
-								  settingKey: "Badge Enabled - My Work", 
-								  bl_BadgeEnabled: null, 
-								  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter" + "&queryId=" + guidDataSource_MyWork, 
-								  blnShowUnassignedItems: false,
-								  blnShowStaleItems: true
-								  };
-		var badgeObject_TeamWork = {navTitleSetting: "Badge Title - Team Work", 
-								  defaultTitle: "Team Work",
-								  settingKey: "Badge Enabled - Team Work", 
-								  bl_BadgeEnabled: null, 
-								  apiString: "/api/V3/WorkItem/GetGridWorkItemsMyGroups?userId=" + session.user.Id + "&isScoped=false&showActivities=false&showInactiveItems=false",
-								  blnShowUnassignedItems: true,
-								  blnShowStaleItems: true
-								  };
-		var badgeObject_ActiveWork = {navTitleSetting: "Badge Title - Active Work", 
-								  defaultTitle: "Active Work",
-								  settingKey: "Badge Enabled - Active Work", 
-								  bl_BadgeEnabled: null, 
-								  apiString: "/api/v3/Dashboard/GetDashboardDataById/?dateFilterType=NoFilter" + "&queryId=" + guidDataSource_ActiveWork,
-								  blnShowUnassignedItems: true,
-								  blnShowStaleItems: true
-								  };
-		var badgeObject_TeamRequests = {navTitleSetting: "Badge Title - Team Requests", 
-								  defaultTitle: "Team Requests",
-								  settingKey: "Badge Enabled - Team Requests", 
-								  bl_BadgeEnabled: null, 
-								  apiString: "/api/V3/WorkItem/GetMyTeamRequest?userId=" + session.user.Id + "&showInactiveItems=false&isScoped=false",
-								  blnShowUnassignedItems: false,
-								  blnShowStaleItems: true
-								  };
-		var badgeObject_WatchList = {navTitleSetting: "Badge Title - Watch List", 
-								  defaultTitle: "Watch List",
-								  settingKey: "Badge Enabled - Watch List", 
-								  bl_BadgeEnabled: null, 
-								  apiString: "/api/V3/WorkItem/GetWatchListByUserId?userId=" + session.user.Id,
-								  blnShowUnassignedItems: false,
-								  blnShowStaleItems: false
-								  };		
+		var badgeObject_MyRequests = 	{navTitleSetting: "Badge Title - My Requests", 
+										  defaultTitle: "My Requests",
+										  settingKey: "Badge Enabled - My Requests",
+										  activityEnabled: null, //Enable or disable counting active activities on badges not needed on this view
+										  bl_BadgeEnabled: null, 
+										  apiString: "/api/V3/WorkItem/GetGridWorkItemsMyRequests?userId=" + session.user.Id + "&showInactiveItems=false",
+										  apiStringWithActivity: "/api/V3/WorkItem/GetGridWorkItemsMyRequests?userId=" + session.user.Id + "&showInactiveItems=false",
+										  apiStringWithoutActivity: "/api/V3/WorkItem/GetGridWorkItemsMyRequests?userId=" + session.user.Id + "&showInactiveItems=false",
+										  blnShowUnassignedItems: false,
+										  blnShowStaleItems: true
+										}; 
+		var badgeObject_MyWork = 		{navTitleSetting: "Badge Title - My Work", 
+										  defaultTitle: "My Work",
+										  settingKey: "Badge Enabled - My Work",
+										  activityEnabled: "Badge My Work - Include Activities", //Enable or disable counting active activities on badges
+										  bl_BadgeEnabled: null, 
+										  apiString: "",
+										  apiStringWithActivity: "/api/V3/WorkItem/GetGridWorkItemsByUser?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
+										  apiStringWithoutActivity: "/api/V3/WorkItem/GetGridWorkItemsByUser?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
+										  blnShowUnassignedItems: false,
+										  blnShowStaleItems: true
+										};
+		var badgeObject_TeamWork = 		{navTitleSetting: "Badge Title - Team Work", 
+										  defaultTitle: "Team Work",
+										  settingKey: "Badge Enabled - Team Work",
+										  activityEnabled: "Badge Team Work - Include Activities", //Enable or disable counting active activities on badges
+										  bl_BadgeEnabled: null, 
+										  apiString: "",
+										  apiStringWithActivity: "/api/V3/WorkItem/GetGridWorkItemsMyGroups?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
+										  apiStringWithoutActivity: "/api/V3/WorkItem/GetGridWorkItemsMyGroups?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
+										  blnShowUnassignedItems: true,
+										  blnShowStaleItems: true
+										};
+		var badgeObject_ActiveWork = 	{navTitleSetting: "Badge Title - Active Work", 
+										  defaultTitle: "Active Work",
+										  settingKey: "Badge Enabled - Active Work",
+										  activityEnabled: "Badge Active Work - Include Activities", //Enable or disable counting active activities on badges
+										  bl_BadgeEnabled: null, 
+										  apiString: "",
+										  apiStringWithActivity: "/api/V3/WorkItem/GetGridWorkItemsAll?userId=" + session.user.Id + "&isScoped=false&showActivities=true&showInactiveItems=false",
+										  apiStringWithoutActivity: "/api/V3/WorkItem/GetGridWorkItemsAll?userId=" + session.user.Id + "&isScoped=false&showActivities=false&showInactiveItems=false",
+										  blnShowUnassignedItems: true,
+										  blnShowStaleItems: true
+										 };
+		var badgeObject_TeamRequests = 	{navTitleSetting: "Badge Title - Team Requests", 
+										  defaultTitle: "Team Requests",
+										  settingKey: "Badge Enabled - Team Requests",
+										  activityEnabled: null, //Enable or disable counting active activities on badges not needed on this view
+										  bl_BadgeEnabled: null, 
+										  apiString: "/api/V3/WorkItem/GetMyTeamRequest?userId=" + session.user.Id + "&showInactiveItems=false&isScoped=false",
+										  apiStringWithActivity: "/api/V3/WorkItem/GetMyTeamRequest?userId=" + session.user.Id + "&showInactiveItems=false&isScoped=false",
+										  apiStringWithoutActivity: "/api/V3/WorkItem/GetMyTeamRequest?userId=" + session.user.Id + "&showInactiveItems=false&isScoped=false",
+										  blnShowUnassignedItems: false,
+										  blnShowStaleItems: true
+										};
+		var badgeObject_WatchList = 	{navTitleSetting: "Badge Title - Watch List", 
+										  defaultTitle: "Watch List",
+										  settingKey: "Badge Enabled - Watch List",
+										  activityEnabled: null, //Enable or disable counting active activities on badges not needed on this view
+										  bl_BadgeEnabled: null, 
+										  apiString: "/api/V3/WorkItem/GetWatchListByUserId?userId=" + session.user.Id,
+										  apiStringWithActivity: "/api/V3/WorkItem/GetWatchListByUserId?userId=" + session.user.Id,
+										  apiStringWithoutActivity: "/api/V3/WorkItem/GetWatchListByUserId?userId=" + session.user.Id,
+										  blnShowUnassignedItems: false,
+										  blnShowStaleItems: false
+										};		
 		//Get the number of days from settings for Days Before Stale Work Items
 		$.ajax({
 			url: "/api/V3/Settings/GetSetting?settingKey=Badge - Days Before Stale",
@@ -212,7 +224,6 @@ $(document).ready(function () {
 				GetSettingsValueAndLoadBadges(badgeObject_WatchList, intStaleDays);
 			}
 		});
-	
 	}
 	
 	//param thisBadgeObject contains:
@@ -243,7 +254,41 @@ $(document).ready(function () {
 					}
 				// *************************************************************
 				if (varLogging.toUpperCase() == "TRUE") {console.log("Badge setting for '" + thisBadgeObject.settingKey + "' is set to " + fn_BadgeEnabledSetting.Value);}
-				//thisBadgeObject.bl_BadgeEnabled = bl_BadgeEnbaledValue;  //Not sure this line is needed as we are storing this value but not using it
+				
+				// ***************** Show or Hide Activities *******************
+				if (thisBadgeObject.activityEnabled == null){
+					thisBadgeObject.apiString = thisBadgeObject.apiStringWithoutActivity
+					if (varLogging.toUpperCase() == "TRUE") {console.log(thisBadgeObject.defaultTitle + " does not have activities and therefore can not be enabled.");}
+				}
+				else {
+					$.ajax({
+						url: "/api/V3/Settings/GetSetting?settingKey=" + thisBadgeObject.activityEnabled,
+						type: "GET",
+						async: false,
+						success: function (fn_ActivityEnabledSetting){
+								// ********** Validate the settings returned ********
+								if (fn_ActivityEnabledSetting == null) { //Setting value not found. Create_BadgesSettingsItems.sql might need to be run
+									throw "The Setting for '" + thisBadgeObject.activityEnabled + "' was not found. Ensure Create_BadgesSettingsItems.sql was run and the setting values exist.";
+								}
+								else if (fn_ActivityEnabledSetting.Value == null) { //Setting is found but a NULL value has been found.
+									throw "Setting value for '" + thisBadgeObject.activityEnabled + "' is null. **" + fn_ActivityEnabledSetting.Value + "**Does it have a TRUE/FALSE value, and was the client session restarted?";
+								}	
+								var bl_BadgeActivityEnbaledValue = fn_ActivityEnabledSetting.Value;
+								if (bl_BadgeActivityEnbaledValue.toUpperCase() != "TRUE") { //Setting is found but is set to FALSE.
+									thisBadgeObject.apiString = thisBadgeObject.apiStringWithoutActivity
+									if (varLogging.toUpperCase() == "TRUE") {console.log(thisBadgeObject.defaultTitle + " activities disabled. API call set to " + thisBadgeObject.apiString);}
+									return;
+								}
+								else {
+									thisBadgeObject.apiString = thisBadgeObject.apiStringWithActivity
+									if (varLogging.toUpperCase() == "TRUE") {console.log(thisBadgeObject.defaultTitle + " activities enabled. API call set to " + thisBadgeObject.apiString);}
+									return;
+								}
+							// *************************************************************
+						}
+					});
+					// *************************************************************
+				}
 				
 				// ********** Get API Query Results ***************
 				$.ajax({
@@ -267,7 +312,7 @@ $(document).ready(function () {
 							}
 						}
 						catch(error) {
-							console.log("error occurred during fn_ShowBadgesFromBadgeObject for '" + thisBadgeObject.settingKey + "'.");
+							console.log("Error occurred during fn_ShowBadgesFromBadgeObject for '" + thisBadgeObject.settingKey + "'.");
 							throw error;
 						}
 					}
@@ -327,7 +372,7 @@ $(document).ready(function () {
 				var targetNavNode = $($('#side_nav li.nav_hover').find('span:contains("' + navTitle + '")')).parent(); //$('#side_nav li.nav_hover').find('span:contains("My Work")').parent();
 				//targetNavNode should be an a tag.
 				if (targetNavNode.length == 0) {
-					throw "Found " + targetNavNode.length + " navigation nodes with name '" + navTitle + "'.";
+					throw "Found " + targetNavNode.length + " navigation nodes with name '" + navTitle + "'. Make sure the name of the navigation node matches what is in your environment. This value can be set in the admin settings.";
 				}
 				
 				var thisMenuBadgeSpanRight = targetNavNode.find("span.menu-rightbadge");
