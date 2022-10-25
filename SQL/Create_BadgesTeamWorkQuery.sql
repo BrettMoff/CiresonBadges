@@ -30,14 +30,15 @@ AS
 	) sg ON COALESCE(sg.TierId, ''00000000-0000-0000-0000-000000000000'') = COALESCE(WorkItem.TierId, ''00000000-0000-0000-0000-000000000000'')
 where (sg.NavNode = ''TeamWork'' OR COALESCE(WorkItem.AssignedUserId, ''00000000-0000-0000-0000-000000000000'') = @UserId)
 			and DisplayStringStatus.LocaleID = ''ENU''
-			and DisplayStringStatus.DisplayString not in (''Resolved'', ''Closed'', ''Completed'', ''Failed'', ''Skipped'', ''Cancelled'')
-			and WorkItem.ClassId NOT IN
-		(
-			''7AC62BD4-8FCE-A150-3B40-16A39A61383D'', --MA
-			''BFD90AAA-80DD-0FBB-6EAF-65D92C1D8E36'' --RA
-		)
+			and DisplayStringStatus.DisplayString not in (''Resolved'', ''Closed'', ''Completed'', ''Failed'', ''Skipped'', ''Cancelled'', ''Pending'')
+			and (''{{ShowActivities}}'' = ''True'' or WorkItem.ClassId NOT IN
+					(
+						''7AC62BD4-8FCE-A150-3B40-16A39A61383D'', --MA
+						''BFD90AAA-80DD-0FBB-6EAF-65D92C1D8E36'' --RA
+					)
+				)
 )
-select 
+select  
 	COUNT(cte_ActiveWorkItems.WorkItemId) as WorkItemCount
 	,COUNT(cte_ActiveWorkItems.IsNoAssignedUser) as WorkItemsWithNoAssignedUserCount
 	,COUNT( IsStaleWorkItem) as StaleWorkItemCount

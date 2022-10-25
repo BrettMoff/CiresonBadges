@@ -25,7 +25,14 @@ outer apply (
 
 where (
 		WorkItem.AssignedUserId = @UserId --@UserId is a special Cireson token for the logged-in user GUID.
-		OR ReviewObjects.ReviewerId = @UserId OR WorkItem.PrimaryOwnerId = @UserId
+		OR ReviewObjects.ReviewerId = @UserId
+		OR WorkItem.PrimaryOwnerId = @UserId)
+		and (''{{ShowActivities}}'' = ''True'' or WorkItem.ClassId NOT IN
+					(
+						''7AC62BD4-8FCE-A150-3B40-16A39A61383D'', --MA
+						''BFD90AAA-80DD-0FBB-6EAF-65D92C1D8E36'' --RA
+					)
+				)
 )
 	
 order by WorkItem.LastModified Desc
