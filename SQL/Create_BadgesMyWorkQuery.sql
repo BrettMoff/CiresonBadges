@@ -33,7 +33,6 @@ where (
 						''BFD90AAA-80DD-0FBB-6EAF-65D92C1D8E36'' --RA
 					)
 				)
-)
 	
 order by WorkItem.LastModified Desc
 ';
