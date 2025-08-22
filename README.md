@@ -2,7 +2,7 @@
 Work Item Badge Count Extension for Cireson Analyst Portal. v1.4
 
 Instructions: 
-1. Run the SQL queriy to insert configuration settings into the ServiceManagement SettingItems table.
+1. Run the SQL query to insert configuration settings into the ServiceManagement SettingItems table.
 2. Copy the custom_WorkItemMenuBadge.js file into your CustomSpace folder
 3. Copy the code within custom.js into your own custom.js file. 
 4. Restart your client-side browser session. Adding a new Setting Item needs to be cached upon initial login.
